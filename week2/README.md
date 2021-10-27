@@ -1,4 +1,4 @@
-SimpleShell Status 🚦
+SimpleShell Work Progress 🚦
 
 ====================<br>
  ctrl + c (SIGINT) : Done <br>
