@@ -1,7 +1,7 @@
-all: lshtest
+all: lsh
 
-lshtest : main.o lsh.o
-	gcc -o lshtest lsh.o main.o
+lsh : main.o lsh.o
+	gcc -o lsh lsh.o main.o
 
 lsh.o : lsh.c lsh.h
 
