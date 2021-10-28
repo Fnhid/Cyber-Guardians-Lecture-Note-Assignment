@@ -7,18 +7,6 @@
  */
 
 
-typedef struct fileinfo{
-	char perm[11];
-	int linkcount;
-	char uid[10];
-	char gid[10];
-	int size;
-	int date[2];
-	int time[2];
-	char filename[NAME_MAX];
-	char link[255];
-}fi;
-
 int lsh_mv(char **args){
 	int args1_dir = 0;
 	int args2_dir = 0;
@@ -38,7 +26,7 @@ int lsh_mv(char **args){
 		if(!stat(args[1], &stold)){
 			if(S_ISDIR(stold.st_mode)){
 				args1_dir = 1;
-				printf("[TEST] 1 DIR\n");
+				//printf("[TEST] 1 DIR\n");
 			}
 		}
 		else{
@@ -47,7 +35,7 @@ int lsh_mv(char **args){
 		if(!stat(args[2], &stnew)){
 			if(S_ISDIR(stnew.st_mode)){
 				args2_dir = 1;
-				printf("[TEST] 2 DIR\n");
+				//printf("[TEST] 2 DIR\n");
 			}
 		} 
 		else{
@@ -116,16 +104,21 @@ int lsh_mv(char **args){
 
 int lsh_ls(char **args)
 {
+	long long blocks = 0;
+	char *t;
+	char path[80];
+	char tmp[80];
+	struct tm* timeinfo;
 	int totalsize = 0;
 	struct stat sb;
 	DIR *dp = NULL;
 	struct dirent *entry = NULL;
 	int option_a = 0;
 	int option_al = 0;
-	int check_ls, argc_ls;
+	int check_ls = 0;
+	int argc_ls;
 	int i = 1;
 	int noargs_flag = 0;
-	check_ls = NULL;
 	while (args[i] != NULL)
 	{
 		if (args[i][0] == '-')
@@ -144,8 +137,6 @@ int lsh_ls(char **args)
 		noargs_flag = 1;
 	}
 
-	//printf("%d ", argc_ls);
-	//printf("%d", noargs_flag);
 
 	if (!check_ls)
 	{
@@ -160,8 +151,9 @@ int lsh_ls(char **args)
 						printf("File or directory not found\n");
 						return 1;
 					}
-
-					printf("%s:\n", args[i]);
+					if(argc_ls > 2){
+						printf("%s:\n", args[i]);
+					}
 					while ((entry = readdir(dp)) != NULL)
 					{
 						if (entry->d_name[0] != '.')
@@ -203,8 +195,9 @@ int lsh_ls(char **args)
 						printf("File or directory not found\n");
 						return 1;
 					}
-
-					printf("%s:\n", args[i]);
+					if(argc_ls > 3){
+						printf("%s:\n", args[i]);
+					}
 					while ((entry = readdir(dp)) != NULL)
 					{
 						printf("%s ", entry->d_name);
@@ -235,18 +228,96 @@ int lsh_ls(char **args)
 			{
 				if (i != check_ls)
 				{
-					char temp[80];
-					char *str[argc_ls];
+					
+					if ((dp = opendir(args[i])) == NULL)
+					{
+						printf("File or directory not found\n");
+						return 1;
+					}
+					
+					if(argc_ls > 3){
+						printf("%s:\n", args[i]);
+					}
+					
+					while ((entry = readdir(dp)) != NULL)
+					{
+						strcpy(path, args[i]);
+						strcat(path, "/");
+						strcat(path, entry->d_name);
+						stat(path, &sb);
+						blocks += sb.st_blocks / 2;
+						
+					}
+					printf("total %lld\n", blocks );
+					blocks = 0;
+					closedir(dp);
+					
+					
 					if ((dp = opendir(args[i])) == NULL)
 					{
 						printf("File or directory not found\n");
 						return 1;
 					}
 
-					printf("%s:\n", args[i]);
 					while ((entry = readdir(dp)) != NULL)
 					{
-						
+						if (entry->d_name[0] != '.')
+						{
+							strcpy(path, args[i]);
+							strcat(path, "/");
+							strcat(path, entry->d_name);
+							stat(path, &sb);
+							
+							if(S_ISREG(sb.st_mode))
+							{
+								printf("-");
+							}
+							else if(S_ISDIR(sb.st_mode))
+							{
+								printf("d");
+							}
+							else if(S_ISCHR(sb.st_mode))
+							{
+								printf("c");
+							}
+							else if(S_ISBLK(sb.st_mode))
+							{
+								printf("b");
+							}
+							else if(S_ISFIFO(sb.st_mode))
+							{
+								printf("p");
+							}
+							else if(S_ISLNK(sb.st_mode))
+							{
+								printf("l");
+							}
+							else if(S_ISSOCK(sb.st_mode)){
+								printf("s");
+							} // check file types
+
+							printf( (sb.st_mode & S_IRUSR) ? "r" : "-");
+							printf( (sb.st_mode & S_IWUSR) ? "w" : "-");
+							printf( (sb.st_mode & S_IXUSR) ? "x" : "-");
+							printf( (sb.st_mode & S_IRGRP) ? "r" : "-");
+							printf( (sb.st_mode & S_IWGRP) ? "w" : "-");
+							printf( (sb.st_mode & S_IXGRP) ? "x" : "-");
+							printf( (sb.st_mode & S_IROTH) ? "r" : "-");
+							printf( (sb.st_mode & S_IWOTH) ? "w" : "-");
+							printf( (sb.st_mode & S_IXOTH) ? "x " : "- ");
+
+							
+							printf("%3ld ", sb.st_nlink);
+							printf("%s ", getpwuid(sb.st_uid)->pw_name);
+							printf("%s ", getgrgid(sb.st_gid)->gr_name);
+							printf("%7ld ", sb.st_size);
+							timeinfo = localtime(&sb.st_mtime);
+							strftime(tmp, sizeof(tmp),"%a %d %H:%M", timeinfo);
+							t = &tmp;
+							if (t[strlen(t)-1] == '\n') t[strlen(t)-1] = '\0'; //remove new line
+							
+							printf("%s %s\n", t, entry->d_name);
+						}
 					}
 
 					printf("\n");
@@ -259,20 +330,97 @@ int lsh_ls(char **args)
 			
 
 			dp = opendir(".");
+			printf(".:\n");
+			
+					
 			while ((entry = readdir(dp)) != NULL)
 			{
-				printf("%s\n", entry->d_name);
+				
+				strcpy(path, "./");
+				strcat(path, entry->d_name);
+				stat(path, &sb);
+				blocks += sb.st_blocks / 2;
+				
+			}
+			printf("total %lld\n", blocks );
+			blocks = 0;
+			closedir(dp);
+			
+			
+			if ((dp = opendir(".")) == NULL)
+			{
+				printf("File or directory not found\n");
+				return 1;
 			}
 
-			printf("\n");
+			while ((entry = readdir(dp)) != NULL)
+			{
+				if (entry->d_name[0] != '.')
+				{
+					strcpy(path, "./");
+					strcat(path, entry->d_name);
+					stat(path, &sb);
+					
+					if(S_ISREG(sb.st_mode))
+					{
+						printf("-");
+					}
+					else if(S_ISDIR(sb.st_mode))
+					{
+						printf("d");
+					}
+					else if(S_ISCHR(sb.st_mode))
+					{
+						printf("c");
+					}
+					else if(S_ISBLK(sb.st_mode))
+					{
+						printf("b");
+					}
+					else if(S_ISFIFO(sb.st_mode))
+					{
+						printf("p");
+					}
+					else if(S_ISLNK(sb.st_mode))
+					{
+						printf("l");
+					}
+					else if(S_ISSOCK(sb.st_mode)){
+						printf("s");
+					} // check file types
+
+					printf( (sb.st_mode & S_IRUSR) ? "r" : "-");
+					printf( (sb.st_mode & S_IWUSR) ? "w" : "-");
+					printf( (sb.st_mode & S_IXUSR) ? "x" : "-");
+					printf( (sb.st_mode & S_IRGRP) ? "r" : "-");
+					printf( (sb.st_mode & S_IWGRP) ? "w" : "-");
+					printf( (sb.st_mode & S_IXGRP) ? "x" : "-");
+					printf( (sb.st_mode & S_IROTH) ? "r" : "-");
+					printf( (sb.st_mode & S_IWOTH) ? "w" : "-");
+					printf( (sb.st_mode & S_IXOTH) ? "x " : "- ");
+
+					
+					printf("%3ld ", sb.st_nlink);
+					printf("%s ", getpwuid(sb.st_uid)->pw_name);
+					printf("%s ", getgrgid(sb.st_gid)->gr_name);
+					printf("%7ld ", sb.st_size);
+					timeinfo = localtime(&sb.st_mtime);
+					strftime(tmp, sizeof(tmp),"%a %d %H:%M", timeinfo);
+					t = &tmp;
+					if (t[strlen(t)-1] == '\n') t[strlen(t)-1] = '\0'; //remove new line
+					
+					printf("%s %s\n", t, entry->d_name);
+				}
+			}
 			closedir(dp);
 		}
+		
 	}
 	else if (!strcmp(args[check_ls], "--help"))
     {
-	printf("TIP : ls[PATH][OPTIONS]\n");
-	printf("Funny Options >\n-a : shows every entries.\n-l : shows the list in a long list format.\n--help : this command!");
-	printf("made by Fnhid.\n");
+	printf("TIP : ls [PATH] [OPTIONS]\n");
+	printf("Funny Options >\n-a : shows every entries.\n-l : shows the list in a long list format.\n--help : this command!\n");
+	
     }
 }
 

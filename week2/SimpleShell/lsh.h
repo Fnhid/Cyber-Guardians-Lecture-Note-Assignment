@@ -7,6 +7,10 @@
 #include <string.h>
 #include <dirent.h>
 #include <signal.h>
+#include <pwd.h>
+#include <time.h>
+#include <grp.h>
+
 int lsh_ls(char **args);
 int stat(const char *pathname, struct stat *statbuf);
 void sigHandle(int sig);
