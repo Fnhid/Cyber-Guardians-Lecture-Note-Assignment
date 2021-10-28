@@ -102,6 +102,13 @@ int lsh_mv(char **args){
 	
 }
 
+
+/*
+   @brief Builtin command: ls.
+   @param args 
+   @return Always returns 0, to terminate execution.
+ */
+
 int lsh_ls(char **args)
 {
 	long long blocks = 0;
@@ -423,5 +430,3 @@ int lsh_ls(char **args)
 	
     }
 }
-
-//to implement every functions of mv command, we need to use stat and rename. and also to check if the file is a directory or not. if it is a directory, we need to use opendir and readdir. if it is a file, we need to use open and read. to move the directory, we need to use opendir and readdir and rename. to move the file, we need to use open and read and rename.
